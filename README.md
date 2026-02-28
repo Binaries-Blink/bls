@@ -1,2 +1,2 @@
-# bls
-The BlinkScript language
+# BlinkScript
+an experimental interpreted programming language
