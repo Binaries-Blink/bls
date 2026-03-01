@@ -1,9 +1,5 @@
-const calc = fn(n: u32) u32 {
+fn calc(n: u32) u32 = {
     ret (n - 2 * 3) + 8;
 }
 
-const main = fn() void {
-    let x = calc(5);
-}
-
-main()
+let x = calc(5);

@@ -5,8 +5,8 @@ const Token = @import("lexer/token.zig").Token;
 const Parser = @import("parser/parser.zig").Parser;
 const AstNode = @import("parser/ast.zig").AstNode;
 
-/// compile a file from some path
-pub fn compile(path: []const u8) !void {
+/// "compile" a file from some path into an AST
+pub fn compile(path: []const u8) !*AstNode {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer _ = arena.deinit();
     const alloc = arena.allocator();
@@ -28,9 +28,10 @@ pub fn compile(path: []const u8) !void {
     // parse
     var parser = Parser.init(alloc, tokens);
     const root = try parser.ParseRoot();
-    _ = root;
 
     const elapsed = std.time.nanoTimestamp() - start;
 
     std.debug.print("compiled in {d} microseconds", .{@divFloor(elapsed, 1000)});
+
+    return root;
 }
