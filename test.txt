@@ -1,5 +1,4 @@
-fn calc(n: u32) u32 = {
-    ret (n - 2 * 3) + 8;
-}
+// single line function, no block needed
+fn calc(n: u32) u32 = n * 3 + 8
 
 let x = calc(5);

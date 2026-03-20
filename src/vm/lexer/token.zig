@@ -1,4 +1,5 @@
 const std = @import("std");
+const Operator = @import("blast").Operator;
 
 pub const TokenType = enum(u16) {
     Tilde,
@@ -167,6 +168,48 @@ pub const TokenType = enum(u16) {
         .{"for",    .For},
         .{"loop",   .Loop},
     });
+
+    pub fn toOperator(self: TokenType) ?Operator {
+        return switch (self) {
+            .Tilde => Operator.BitNot,
+            .Bang => Operator.Not,
+            .Assign => Operator.Assign,
+            .Path => Operator.Path,
+            .Dot => Operator.MemberAccess,
+            .Range => Operator.Range,
+            .RangeInc => Operator.RangeInc,
+            .Add => Operator.Add,
+            .CompAdd => Operator.CompAdd,
+            .Sub => Operator.Sub,
+            .CompSub => Operator.CompSub,
+            .Mul => Operator.Mul,
+            .CompMul => Operator.CompMul,
+            .Div => Operator.Div,
+            .CompDiv => Operator.CompDiv,
+            .Mod => Operator.Mod,
+            .CompMod => Operator.CompMod,
+            .Lshift => Operator.Lshift,
+            .CompLshift => Operator.CompLshift,
+            .Rshift => Operator.Rshift,
+            .CompRshift => Operator.CompRshift,
+            .BitAnd => Operator.BitAnd,
+            .CompBitAnd => Operator.CompBitAnd,
+            .BitOr => Operator.BitOr,
+            .CompBitOr => Operator.CompBitOr,
+            .BitXor => Operator.BitXor,
+            .CompBitXor => Operator.CompBitXor,
+            .CompBitNot => Operator.BitNot,
+            .Neq => Operator.Neq,
+            .Eq => Operator.Eq,
+            .Gt => Operator.Gt,
+            .Lt => Operator.Lt,
+            .Ge => Operator.Ge,
+            .Le => Operator.Le,
+            .And => Operator.And,
+            .Or => Operator.Or,
+            else => null,
+        };
+    }
 };
 
 pub const Token = struct {

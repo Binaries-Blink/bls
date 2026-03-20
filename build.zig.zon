@@ -4,6 +4,10 @@
     .fingerprint = 0xb456c2717c50a9f5,
     .minimum_zig_version = "0.15.2",
     .dependencies = .{
+        .blast = .{
+            .url = "git+https://github.com/Binaries-Blink/blast#f031b41d583bd668954e7ff1893a7867ba484115",
+            .hash = "blast-0.0.0-ArYzCwCsAADexwya4dF7YwsFT2iTHsDLwPrHaqP2-Seh",
+        },
     },
     .paths = .{
         "build.zig",

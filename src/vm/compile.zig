@@ -3,7 +3,8 @@ const std = @import("std");
 const Lexer = @import("lexer/lexer.zig").Lexer;
 const Token = @import("lexer/token.zig").Token;
 const Parser = @import("parser/parser.zig").Parser;
-const AstNode = @import("parser/ast.zig").AstNode;
+const AstNode = @import("blast").AstNode;
+const Analyzer = @import("blast").Analyzer;
 
 /// "compile" a file from some path into an AST
 pub fn compile(path: []const u8) !*AstNode {
@@ -27,11 +28,18 @@ pub fn compile(path: []const u8) !*AstNode {
 
     // parse
     var parser = Parser.init(alloc, tokens);
-    const root = try parser.ParseRoot();
+    const root = try parser.parseRoot();
+
+    // semantic analysis
+    var analyzer = try Analyzer.init(alloc);
+    try analyzer.analyze(root);
+
+    const table = analyzer.table;
 
     const elapsed = std.time.nanoTimestamp() - start;
-
-    std.debug.print("compiled in {d} microseconds", .{@divFloor(elapsed, 1000)});
+    std.debug.print("compiled in {d} microseconds\n", .{@divFloor(elapsed, 1000)});
+    std.debug.print("{f}\n", .{root});
+    std.debug.print("{f}\n", .{table});
 
     return root;
 }

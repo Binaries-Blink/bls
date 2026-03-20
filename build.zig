@@ -9,7 +9,14 @@ pub fn build(b: *std.Build) void {
         .target = target,
     });
 
+    const dep_blast = b.dependency("blast", .{
+        .target = target,
+        .optimize = optimize,
+    });
 
+    const mod_blast = dep_blast.module("blast");
+    mod.addImport("blast", mod_blast);
+    
     const exe = b.addExecutable(.{
         .name = "bls",
         .root_module = b.createModule(.{
@@ -18,9 +25,11 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
             .imports = &.{
                 .{ .name = "bls", .module = mod },
+                .{ .name = "blast", .module = mod_blast }
             },
         }),
     });
+
 
     b.installArtifact(exe);
 

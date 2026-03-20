@@ -42,6 +42,19 @@ fn skipWhitespace(self: *Self) void {
     }
 }
 
+fn skipComment(self: *Self) void {
+    const start = self.pos;
+    if (self.peek() orelse return == '/') _ = self.advance()
+    else {self.pos = start; return;}
+
+    if (self.peek() orelse return == '/') _ = self.advance()
+    else {self.pos = start; return;}
+
+    while (self.advance() != '\n'){}
+
+    return;
+}
+
 fn number(self: *Self, start: usize) !Token {
     while (!self.eof()) {
         const c = self.peek();
@@ -118,6 +131,8 @@ fn symbol(self: *Self, start: usize) !Token {
 
 /// returns the next token that can be constructed from the input string, or any errors that are encountered while doing so.
 fn nextToken(self: *Self) !?Token {
+    self.skipWhitespace();
+    self.skipComment();
     self.skipWhitespace();
     if (self.eof()) return null;
 
