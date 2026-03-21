@@ -44,15 +44,33 @@ fn skipWhitespace(self: *Self) void {
 
 fn skipComment(self: *Self) void {
     const start = self.pos;
-    if (self.peek() orelse return == '/') _ = self.advance()
+    if ((self.peek() orelse return) == '/') _ = self.advance()
     else {self.pos = start; return;}
 
-    if (self.peek() orelse return == '/') _ = self.advance()
+    if ((self.peek() orelse return) == '/') _ = self.advance()
     else {self.pos = start; return;}
 
-    while (self.advance() != '\n'){}
-
+    // Consume until newline or EOF
+    while (self.peek()) |c| {
+        _ = self.advance();
+        if (c == '\n') return;
+        // Handle \r\n (Windows line endings)
+        if (c == '\r') {
+            if ((self.peek() orelse return) == '\n') _ = self.advance();
+            return;
+        }
+    }
     return;
+}
+
+// skips all non code symbols (whitespace & comments)
+fn skip(self: *Self) void {
+    while (true) {
+        const start = self.pos;
+        self.skipWhitespace();
+        self.skipComment();
+        if (self.pos == start) break;
+    }
 }
 
 fn number(self: *Self, start: usize) !Token {
@@ -131,9 +149,10 @@ fn symbol(self: *Self, start: usize) !Token {
 
 /// returns the next token that can be constructed from the input string, or any errors that are encountered while doing so.
 fn nextToken(self: *Self) !?Token {
-    self.skipWhitespace();
-    self.skipComment();
-    self.skipWhitespace();
+    // self.skipWhitespace();
+    // self.skipComment();
+    // self.skipWhitespace();
+    self.skip();
     if (self.eof()) return null;
 
     const start = self.pos;

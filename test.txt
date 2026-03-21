@@ -1,4 +1,7 @@
 // single line function, no block needed
-fn calc(n: u32) u32 = n * 3 + 8
+fn calc(n: u32) u32 = (n + 3) * 8
 
-let x = calc(5);
+let x = calc(4);
+let y = calc(5) / 2;
+// would require an explicit cast if z were of type  u64
+let z: u32 = x * y;

@@ -284,10 +284,7 @@ pub fn parseRoot(self: *Self) !*AstNode {
         const node = try switch (self.tokens[self.pos].type) {
             .Fn => self.parseFn(),
             .Let => self.parseLet(),
-            else => {
-                std.debug.print("{f}", .{self.peek().?});
-                return ParseError.UnexpectedToken;
-            },
+            else => self.parseExpr(),
         };
         try nodes.append(self.alloc, node);
     }

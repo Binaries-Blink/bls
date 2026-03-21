@@ -5,8 +5,8 @@
     .minimum_zig_version = "0.15.2",
     .dependencies = .{
         .blast = .{
-            .url = "git+https://github.com/Binaries-Blink/blast#f031b41d583bd668954e7ff1893a7867ba484115",
-            .hash = "blast-0.0.0-ArYzCwCsAADexwya4dF7YwsFT2iTHsDLwPrHaqP2-Seh",
+            .url = "git+https://github.com/Binaries-Blink/blast#406b251a1f85eab40579af06151940e73db30ad3",
+            .hash = "blast-0.0.0-ArYzC7m2AAAcJ0iYx-vLt2y87sf2TS7Ucmhg_nnpnz4w",
         },
     },
     .paths = .{
