@@ -1,6 +1,6 @@
 const std = @import("std");
-const Token = @import("../lexer/token.zig").Token;
-const TokenType = @import("../lexer/token.zig").TokenType;
+const Token = @import("token.zig").Token;
+const TokenType = @import("token.zig").TokenType;
 
 const AstNode = @import("blast").AstNode;
 const NodeKind = @import("blast").AstNode.NodeKind;
