@@ -1,4 +1,8 @@
 pub const Opcode = enum(u8) {
+    /// load a constant
+    LOADC,
+    /// load a function
+    LOADF,
     // load & store
     /// load integer literal directly into a register
     LOADI,
@@ -87,13 +91,21 @@ pub const IInst = packed struct(u32) {
 /// ex. JMP +14
 pub const JInst = packed struct(u32) {
     code  : u8,
-    dst   : u6,
+    /// meanings based on code:
+    /// ```txt
+    /// JMP      -> None, it is unused
+    /// JE / JNE -> will jump if value in reg is true / false
+    /// RET      -> register contains the value to return
+    /// CALL     -> value returned by call is stored in reg
+    /// LOAD_FN  -> loads a reference to the function into reg
+    /// ```
+    reg   : u6,
     offset: i18,
 
     pub fn encode(self: JInst) u32 {
         return @bitCast(JInst {
             .code = self.code,
-            .dst = self.dst,
+            .reg = self.reg,
             .offset = self.offset,
         });
     }

@@ -55,12 +55,7 @@ const Compiler = struct {
     /// create a new chunk, return its index
     fn beginChunk(self: *Self) !usize {
         const idx = self.chunks.items.len;
-
-        try self.chunks.append(self.alloc, Chunk {
-            .alloc = self.alloc,
-            .code = try std.ArrayList(u32).initCapacity(self.alloc, 0),
-        });
-
+        try self.chunks.append(self.alloc, try Chunk.init(self.alloc));
         return idx;
     }
 
