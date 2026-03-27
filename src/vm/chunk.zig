@@ -1,10 +1,12 @@
 const std = @import("std");
 const inst = @import("instruction.zig");
+const RegisterAllocator = @import("register.zig").RegisterAllocator;
 
 pub const Value = union(enum) {
     int: i64,
     float: f64,
     bool: bool,
+    fn_ref: u18,
 };
 
 pub const Chunk = struct {
@@ -13,6 +15,7 @@ pub const Chunk = struct {
     code: std.ArrayList(u32),
     constants: std.ArrayList(Value),
     functions: std.ArrayList(*Chunk),
+    regs: RegisterAllocator = .{},
 
     const Self = @This();
 
@@ -125,7 +128,7 @@ pub const Chunk = struct {
         switch (val) {
             .int => |i| {
                 if (i >= std.math.minInt(i12) and i <= std.math.maxInt(i12)) {
-                    try self.emitI(.LOADI, dst, 0, i);
+                    try self.emitI(.LOADI, dst, 0, @as(i12, @intCast(i)));
                 } else {
                     const idx = try self.addConst(val);
                     try self.emitJ(.LOADC, dst, @bitCast(idx));
@@ -136,6 +139,9 @@ pub const Chunk = struct {
                 try self.emitJ(.LOADC, dst, @bitCast(idx));
             },
             .bool => |b| try self.emitI(.LOADI, dst, 0, if (b) 1 else 0),
+            .fn_ref => |r| {
+                try self.emitJ(.LOADF, dst, @intCast(r));
+            },
         }
     }
 

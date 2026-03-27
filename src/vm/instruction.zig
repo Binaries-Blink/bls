@@ -1,3 +1,5 @@
+const Operator = @import("blast").Operator;
+
 pub const Opcode = enum(u8) {
     /// load a constant
     LOADC,
@@ -16,6 +18,8 @@ pub const Opcode = enum(u8) {
     LOADG,
     /// store a value in a global variable
     STOREG,
+    /// log a certain register to be used for the next function call
+    ARG,
 
     // arithmetic
     ADD, SUB,
@@ -46,6 +50,32 @@ pub const Opcode = enum(u8) {
     ITOF,
     FTOI,
 };
+
+pub fn OpToCode(op: Operator) ?Opcode {
+    return switch (op) {
+        .Add => .ADD,
+        .Sub => .SUB,
+        .Mul => .MUL,
+        .Div => .DIV,
+        .Mod => .MOD,
+
+        .Eq => .EQ,
+        .Neq => .NE,
+        .Gt => .GT,
+        .Ge => .GE,
+        .Lt => .LT,
+        .Le => .LE,
+
+        .BitAnd => .AND,
+        .BitOr => .OR,
+        .BitXor => .XOR,
+        .BitNot => .NOT,
+        .Lshift => .SHL,
+        .Rshift => .SHR,
+
+        else => null,
+    };
+}
 
 /// register instruction
 ///
