@@ -1,3 +1,4 @@
+const std = @import("std");
 const Operator = @import("blast").Operator;
 
 pub const Opcode = enum(u8) {
@@ -140,3 +141,31 @@ pub const JInst = packed struct(u32) {
         });
     }
 };
+
+pub fn writeInstruction(encoded: u32, writer: *std.Io.Writer) !void {
+    const op: Opcode = @enumFromInt(encoded & 0xFF);
+    try writer.print("{s: <7} ", .{@tagName(op)});
+    switch (op) {
+        .ADD, .SUB, .MUL, .DIV, .MOD,
+        .AND, .OR, .XOR,
+        .EQ, .NE, .GT, .GE, .LT, .LE,
+        .LOADR => {
+            const inst: RInst = @bitCast(encoded);
+            try writer.print("r{d} r{d} r{d}", .{inst.dst, inst.src1, inst.src2});
+        },
+        .LOADC, .LOADI, .LOADM, .STOREM,
+        .LOADG, .STOREG,
+        .NEG, .NOT, .SHL, .SHR,
+        .ITOF, .FTOI,
+        .ARG, => {
+            const inst: IInst = @bitCast(encoded);
+            try writer.print("r{d} r{d} {d}", .{inst.dst, inst.src, inst.imm});
+        },
+        .JMP, .JE, .JNE,
+        .CALL, .LOADF, .RET => {
+            const inst: JInst = @bitCast(encoded);
+            try writer.print("r{d} {d}", .{inst.reg, inst.offset});
+        },
+        else => {},
+    }
+}

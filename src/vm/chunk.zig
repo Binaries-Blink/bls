@@ -1,12 +1,22 @@
 const std = @import("std");
 const inst = @import("instruction.zig");
 const RegisterAllocator = @import("register.zig").RegisterAllocator;
+const writeInstruction = @import("instruction.zig").writeInstruction;
 
 pub const Value = union(enum) {
     int: i64,
     float: f64,
     bool: bool,
     fn_ref: u18,
+
+    pub fn format(self: @This(), writer: *std.Io.Writer) !void {
+        switch (self) {
+            .int => |i| try writer.print("{d}\n", .{i}),
+            .float => |f| try writer.print("{d}\n", .{f}),
+            .bool => |b| try writer.print("{any}\n", .{b}),
+            .fn_ref => |f| try writer.print("fn -> {d}\n", .{f}),
+        }
+    }
 };
 
 pub const Chunk = struct {
@@ -148,5 +158,23 @@ pub const Chunk = struct {
     /// emit an instruction to load a given function
     pub fn emitLoadFn(self: *Self, dst: u6, idx: u18) !void {
         try self.emitJ(.LOADF, dst, @bitCast(idx));
+    }
+
+    pub fn format(self: @This(), writer: *std.Io.Writer) !void {
+        try writer.print("constants:\n", .{});
+        for (self.constants.items) |val| {
+            try writer.print("{f}", .{val});
+        }
+        try writer.print("functions:\n", .{});
+        for (self.functions.items) |func| {
+            try writer.print("{f}", .{func.*});
+        }
+
+        try writer.print("code:\n", .{});
+        for (self.code.items) |code| {
+            try writer.print("  ", .{});
+            try writeInstruction(code, writer);
+            try writer.print("\n", .{});
+        }
     }
 };

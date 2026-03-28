@@ -1,11 +1,6 @@
 /// single line function, no block needed
-fn calc(n: u64) u64 = (n + 3) * 8
-
-/// function with a block body
-fn calc2(n: u64) u64 = {
-    ret (n + 3) * 8;
-}
+fn calc(n: u64) u64 = (n + 3000) * 8
 
 let x = calc(4);      // 56
-let y = calc2(5) / 2; // 32
-let z = x * y;   // 56 * 32
+let y = calc(5) / 2;  // 32
+let z = x * y;        // 56 * 32

@@ -117,7 +117,7 @@ const Compiler = struct {
     /// lookup some symbol across all scopes in the stack
     fn lookup(self: *Self, name: []const u8) ?Symbol {
         var i = self.scopes.items.len - 1;
-        while (i > 0) : (i -= 1) {
+        while (i >= 0) : (i -= 1) {
             if (self.scopes.items[i].get(name)) |s| return s;
         }
         return null;
