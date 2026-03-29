@@ -8,8 +8,7 @@ pub fn main() !void {
 
     const root = try bls.parse(alloc, "test.txt");
     const chunks = try bls.compile(alloc, root);
-    for (chunks, 0..) |chunk, i| {
-        std.debug.print("===== chunk {d} =====\n", .{i});
+    for (chunks) |chunk| {
         std.debug.print("{f}", .{chunk});
     }
 }

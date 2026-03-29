@@ -1,5 +1,6 @@
 const std = @import("std");
 const Operator = @import("blast").Operator;
+const Chunk = @import("chunk.zig").Chunk;
 
 pub const Opcode = enum(u8) {
     /// load a constant
@@ -142,7 +143,7 @@ pub const JInst = packed struct(u32) {
     }
 };
 
-pub fn writeInstruction(encoded: u32, writer: *std.Io.Writer) !void {
+pub fn writeInstruction(encoded: u32, writer: *std.Io.Writer, container: *const Chunk) !void {
     const op: Opcode = @enumFromInt(encoded & 0xFF);
     try writer.print("{s: <7} ", .{@tagName(op)});
     switch (op) {
@@ -159,12 +160,22 @@ pub fn writeInstruction(encoded: u32, writer: *std.Io.Writer) !void {
         .ITOF, .FTOI,
         .ARG, => {
             const inst: IInst = @bitCast(encoded);
-            try writer.print("r{d} r{d} {d}", .{inst.dst, inst.src, inst.imm});
+            try writer.print("r{d} r{d} #{d}", .{inst.dst, inst.src, inst.imm});
         },
         .JMP, .JE, .JNE,
-        .CALL, .LOADF, .RET => {
+        .LOADF, .RET => {
             const inst: JInst = @bitCast(encoded);
-            try writer.print("r{d} {d}", .{inst.reg, inst.offset});
+            try writer.print("r{d} #{d}", .{inst.reg, inst.offset});
+        },
+        .CALL => {
+            const inst: JInst = @bitCast(encoded);
+            try writer.print("r{d} {s}", .{
+                inst.reg,
+                container.functions.items[@intCast(inst.offset)].name
+            });
+        },
+        .RET_VOID => {
+            try writer.print("RET_VOID", .{});
         },
         else => {},
     }

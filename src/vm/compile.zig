@@ -74,9 +74,9 @@ const Compiler = struct {
     }
 
     /// create a new chunk, return its index
-    fn beginChunk(self: *Self) Error!usize {
+    fn beginChunk(self: *Self, name: []const u8) Error!usize {
         const idx = self.chunks.items.len;
-        try self.chunks.append(self.alloc, try Chunk.init(self.alloc));
+        try self.chunks.append(self.alloc, try Chunk.init(self.alloc, name));
         return idx;
     }
 
@@ -135,7 +135,7 @@ const Compiler = struct {
                 try self.define(l.name, .{ .register = reg });
             },
             .@"fn" => |f| {
-                const body_idx = try self.beginChunk();
+                const body_idx = try self.beginChunk(f.name);
                 try self.pushScope();
                 const body_chunk = self.getChunk(body_idx);
 
@@ -146,8 +146,12 @@ const Compiler = struct {
                     try self.define(param.kind.param.name, .{ .register = reg });
                 }
 
-                try self.compileNode(f.body, body_idx);
+                const result = try self.compileExpr(f.body, body_idx);
+                try body_chunk.emitRet(result);
+                body_chunk.regs.free(result);
+
                 self.popScope();
+
                 try self.endChunk(body_idx);
 
                 const fn_chunk = self.chunks.pop() orelse return error.ExpectedChunk;
@@ -265,7 +269,7 @@ pub fn compile(alloc: std.mem.Allocator, root: *AstNode) Compiler.Error![]Chunk 
     };
 
     try compiler.pushScope();
-    const top = try compiler.beginChunk();
+    const top = try compiler.beginChunk("main");
     try compiler.compileNode(root, top);
     try compiler.endChunk(top);
     compiler.popScope();

@@ -21,6 +21,7 @@ pub const Value = union(enum) {
 
 pub const Chunk = struct {
     alloc: std.mem.Allocator,
+    name: []const u8,
     /// the actual bytecode for this chunk
     code: std.ArrayList(u32),
     constants: std.ArrayList(Value),
@@ -29,9 +30,10 @@ pub const Chunk = struct {
 
     const Self = @This();
 
-    pub fn init(alloc: std.mem.Allocator) !Chunk {
+    pub fn init(alloc: std.mem.Allocator, name: []const u8) !Chunk {
         return .{
             .alloc = alloc,
+            .name = name,
             .code = try std.ArrayList(u32).initCapacity(alloc, 0),
             .constants = try std.ArrayList(Value).initCapacity(alloc, 0),
             .functions = try std.ArrayList(*Chunk).initCapacity(alloc, 0),
@@ -160,21 +162,45 @@ pub const Chunk = struct {
         try self.emitJ(.LOADF, dst, @bitCast(idx));
     }
 
-    pub fn format(self: @This(), writer: *std.Io.Writer) !void {
-        try writer.print("constants:\n", .{});
-        for (self.constants.items) |val| {
-            try writer.print("{f}", .{val});
+    fn writeIndent(writer: *std.io.Writer, i: usize) !void {
+        for (0..i) |_| {
+            try writer.print("  ", .{});
         }
-        try writer.print("functions:\n", .{});
-        for (self.functions.items) |func| {
-            try writer.print("{f}", .{func.*});
+    }
+
+    fn fmtChunk(self: @This(), writer: *std.io.Writer, name: []const u8, depth: usize) !void {
+        if (self.constants.items.len > 0) {
+            try writeIndent(writer, depth);
+            try writer.print(".constants\n", .{});
+            for (self.constants.items, 0..) |c, i| {
+                try writeIndent(writer, depth + 1);
+                try writer.print("{d}: {f}\n", .{i, c});
+            }
         }
 
-        try writer.print("code:\n", .{});
-        for (self.code.items) |code| {
-            try writer.print("  ", .{});
-            try writeInstruction(code, writer);
-            try writer.print("\n", .{});
+        if (self.functions.items.len > 0) {
+            for (self.functions.items, 0..) |f, i| {
+                _ = i;
+                const chunk_name = std.mem.concat(
+                    self.alloc, u8, &.{"fn ", f.name}
+                ) catch unreachable; // can only fail if we run out of memory
+                try f.fmtChunk(writer, chunk_name, depth);
+                try writer.writeByte('\n');
+            }
+         }
+
+        try writeIndent(writer, depth);
+        try writer.print(".{s}\n", .{name});
+        try writeIndent(writer, depth + 1);
+        try writer.print(".code\n", .{});
+        for (self.code.items) |i| {
+            try writeIndent(writer, depth + 2);
+            try writeInstruction(i, writer, &self);
+            try writer.writeByte('\n');
         }
+    }
+
+    pub fn format(self: @This(), writer: *std.Io.Writer) !void {
+        try self.fmtChunk(writer, "main", 0);
     }
 };
