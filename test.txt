@@ -3,5 +3,4 @@ fn calc(n: u64) u64 = (n + 3) * 8
 
 let x = calc(2);      // 40
 let y = calc(x / 2);  // 184
-let z = x * y;        // 40 * 184
-
+let z = x * y;        // 40 * 184 = 7360

@@ -44,6 +44,11 @@ pub fn parse(alloc: std.mem.Allocator, path: []const u8) !*AstNode {
     return root;
 }
 
+const ExprResult = struct {
+    reg: u6,
+    owned: bool = true,
+};
+
 const Compiler = struct {
     alloc: std.mem.Allocator,
     chunks: std.ArrayList(Chunk),
@@ -133,8 +138,8 @@ const Compiler = struct {
                 // i need to implement a constEval function
             },
             .let => |l| {
-                const reg = try self.compileExpr(l.value, chunk_idx);
-                try self.define(l.name, .{ .register = reg });
+                const res = try self.compileExpr(l.value, chunk_idx);
+                try self.define(l.name, .{ .register = res.reg });
             },
             .@"fn" => |f| {
                 const body_idx = try self.beginChunk(f.name);
@@ -149,8 +154,10 @@ const Compiler = struct {
                 }
 
                 const result = try self.compileExpr(f.body, body_idx);
-                try body_chunk.emitRet(result);
-                body_chunk.regs.free(result);
+                try body_chunk.emitRet(result.reg);
+                if (result.owned) {
+                    body_chunk.regs.free(result.reg);
+                }
 
                 self.popScope();
 
@@ -172,7 +179,7 @@ const Compiler = struct {
     }
 
     /// expression specific compilation
-    fn compileExpr(self: *Self, node: *AstNode, chunk_idx: usize) Error!u6 {
+    fn compileExpr(self: *Self, node: *AstNode, chunk_idx: usize) Error!ExprResult {
         const chunk = self.getChunk(chunk_idx);
         const meta = node.meta orelse return error.NullMeta;
 
@@ -204,7 +211,7 @@ const Compiler = struct {
                         return Error.NotImplemented;
                     },
                 }
-                return dst;
+                return .{ .reg = dst };
             },
             .ident => |id| {
                 const sym = self.lookup(id.name) orelse {
@@ -212,11 +219,11 @@ const Compiler = struct {
                     return error.UndefinedIdent;
                 };
                 switch (sym) {
-                    .register => |r| return r,
+                    .register => |r| return .{ .reg = r, .owned = false },
                     .constant => |v| {
                         const dst = try chunk.regs.alloc();
                         try chunk.emitLoad(dst, v);
-                        return dst;
+                        return .{ .reg = dst };
                     },
                 }
             },
@@ -231,13 +238,13 @@ const Compiler = struct {
                 };
 
                 for (c.args) |arg| {
-                    const reg = try self.compileExpr(arg, chunk_idx);
-                    try chunk.emitR(.ARG, 0, reg, 0);
+                    const result = try self.compileExpr(arg, chunk_idx);
+                    try chunk.emitR(.ARG, 0, result.reg, 0);
                 }
 
                 const dst = try chunk.regs.alloc();
                 try chunk.emitJ(.CALL, dst, @intCast(fn_idx));
-                return dst;
+                return .{ .reg = dst };
             },
             .unary => |_| {
                 return Error.NotImplemented;
@@ -247,10 +254,10 @@ const Compiler = struct {
                 const rhs = try self.compileExpr(b.right, chunk_idx);
                 const dst = try chunk.regs.alloc();
                 const op = inst.OpToCode(b.op) orelse return error.InvalidOp;
-                try chunk.emitR(op, dst, lhs, rhs);
-                chunk.regs.free(lhs);
-                chunk.regs.free(rhs);
-                return dst;
+                try chunk.emitR(op, dst, lhs.reg, rhs.reg);
+                if (lhs.owned) chunk.regs.free(lhs.reg);
+                if (rhs.owned) chunk.regs.free(rhs.reg);
+                return .{.reg = dst};
             },
             .@"if" => |_| {
                 return Error.NotImplemented;

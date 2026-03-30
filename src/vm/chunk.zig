@@ -13,11 +13,11 @@ pub const Value = union(enum) {
 
     pub fn format(self: @This(), writer: *std.Io.Writer) !void {
         switch (self) {
-            .int => |i| try writer.print("{d}\n", .{i}),
-            .float => |f| try writer.print("{d}\n", .{f}),
-            .bool => |b| try writer.print("{any}\n", .{b}),
-            .fn_ref => |f| try writer.print("fn -> {d}\n", .{f}),
-            .void => try writer.print("void\n", .{}),
+            .int => |i| try writer.print("{d}", .{i}),
+            .float => |f| try writer.print("{d}", .{f}),
+            .bool => |b| try writer.print("{any}", .{b}),
+            .fn_ref => |f| try writer.print("fn -> {d}", .{f}),
+            .void => try writer.print("void", .{}),
         }
     }
 };
