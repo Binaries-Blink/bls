@@ -12,7 +12,7 @@ pub const StackFrame = struct {
 };
 
 pub const Vm = struct {
-    alloc: std.mem.Allocator(),
+    alloc: std.mem.Allocator,
     frames: std.ArrayList(StackFrame),
 
     const Self = @This();
@@ -26,5 +26,12 @@ pub const Vm = struct {
 
     pub fn deinit(self: Self) void {
         self.frames.deinit(self.alloc);
+    }
+
+    /// run the program
+    pub fn run(self: *Self, main: Chunk) !void {
+        _ = self;
+        _ = main;
+        return error.todo;
     }
 };

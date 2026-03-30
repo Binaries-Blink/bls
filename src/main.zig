@@ -7,11 +7,10 @@ pub fn main() !void {
     const alloc = arena.allocator();
 
     const root = try bls.parse(alloc, "test.txt");
-    const chunks = try bls.compile(alloc, root);
-    for (chunks) |chunk| {
-        std.debug.print("{f}", .{chunk});
-    }
+    const main_chunk = try bls.compile(alloc, root);
 
-    var vm = bls.Vm.init(alloc);
-    vm.run(chunks);
+    std.debug.print("{f}", .{main_chunk});
+
+    var vm = try bls.Vm.init(alloc);
+    try vm.run(main_chunk);
 }

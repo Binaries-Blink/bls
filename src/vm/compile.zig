@@ -66,6 +66,8 @@ const Compiler = struct {
         Overflow,
         InvalidCharacter,
 
+        UnclosedChunk,
+
         NotImplemented,
     };
 
@@ -261,7 +263,7 @@ const Compiler = struct {
 };
 
 /// compile an Ast into bytecode,
-pub fn compile(alloc: std.mem.Allocator, root: *AstNode) Compiler.Error![]Chunk {
+pub fn compile(alloc: std.mem.Allocator, root: *AstNode) Compiler.Error!Chunk {
     var compiler = Compiler {
         .alloc = alloc,
         .chunks = try std.ArrayList(Chunk).initCapacity(alloc, 0),
@@ -274,5 +276,8 @@ pub fn compile(alloc: std.mem.Allocator, root: *AstNode) Compiler.Error![]Chunk 
     try compiler.endChunk(top);
     compiler.popScope();
 
-    return compiler.chunks.toOwnedSlice(alloc);
+    // the only remaining chunk must be main, otherwise something has gone wrong
+    if (compiler.chunks.items.len != 1) return Compiler.Error.UnclosedChunk;
+
+    return compiler.chunks.items[0];
 }
