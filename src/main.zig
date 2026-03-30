@@ -11,4 +11,7 @@ pub fn main() !void {
     for (chunks) |chunk| {
         std.debug.print("{f}", .{chunk});
     }
+
+    var vm = bls.Vm.init(alloc);
+    vm.run(chunks);
 }
