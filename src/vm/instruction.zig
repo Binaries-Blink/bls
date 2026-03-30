@@ -143,8 +143,37 @@ pub const JInst = packed struct(u32) {
     }
 };
 
+pub const Instruction = union(enum) {
+    reg: RInst,
+    imm: IInst,
+    jmp: JInst,
+
+    pub fn decode(encoded: u32) Instruction {
+        const op: Opcode = @enumFromInt(encoded & 0xff);
+
+        return switch (op) {
+            .ADD, .SUB, .MUL, .DIV, .MOD,
+            .AND, .OR, .XOR,
+            .EQ, .NE, .GT, .GE, .LT, .LE,
+            .LOADR, .FREE => Instruction { .reg = @bitCast(encoded) },
+
+            .LOADC, .LOADI, .LOADM, .STOREM,
+            .LOADG, .STOREG,
+            .NEG, .NOT, .SHL, .SHR,
+            .ITOF, .FTOI,
+            .ARG, .ALLOC => Instruction { .imm = @bitCast(encoded) },
+
+            .JMP, .JE, .JNE,
+            .LOADF, .RET,
+            .CALL,
+            .RET_VOID => Instruction { .jmp = @bitCast(encoded) },
+        };
+    }
+};
+
+
 pub fn writeInstruction(encoded: u32, writer: *std.Io.Writer, container: *const Chunk) !void {
-    const op: Opcode = @enumFromInt(encoded & 0xFF);
+    const op: Opcode = @enumFromInt(encoded & 0xff);
     try writer.print("{s: <7} ", .{@tagName(op)});
     switch (op) {
         .ADD, .SUB, .MUL, .DIV, .MOD,

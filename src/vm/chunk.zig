@@ -4,6 +4,8 @@ const RegisterAllocator = @import("register.zig").RegisterAllocator;
 const writeInstruction = @import("instruction.zig").writeInstruction;
 
 pub const Value = union(enum) {
+    /// uninitialized
+    void,
     int: i64,
     float: f64,
     bool: bool,
@@ -15,6 +17,7 @@ pub const Value = union(enum) {
             .float => |f| try writer.print("{d}\n", .{f}),
             .bool => |b| try writer.print("{any}\n", .{b}),
             .fn_ref => |f| try writer.print("fn -> {d}\n", .{f}),
+            .void => try writer.print("void\n", .{}),
         }
     }
 };
@@ -154,6 +157,8 @@ pub const Chunk = struct {
             .fn_ref => |r| {
                 try self.emitJ(.LOADF, dst, @intCast(r));
             },
+            // this is technically a FREE, which will be handles separately
+            .void => {},
         }
     }
 

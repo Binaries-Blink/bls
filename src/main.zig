@@ -12,5 +12,5 @@ pub fn main() !void {
     std.debug.print("{f}", .{main_chunk});
 
     var vm = try bls.Vm.init(alloc);
-    try vm.run(main_chunk);
+    try vm.run(&main_chunk);
 }
