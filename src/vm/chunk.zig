@@ -78,17 +78,18 @@ pub const Chunk = struct {
     }
 
     /// add a jump instruction to the code
-    pub fn emitJ(self: *Self, op: inst.Opcode, reg: u6, offset: i18) !void {
+    pub fn emitJ(self: *Self, op: inst.Opcode, reg: u6, offset: i18) !usize {
         try self.code.append(self.alloc, inst.JInst.encode(.{
             .code = @intFromEnum(op),
             .reg = reg,
             .offset = offset,
         }));
+        return self.code.items.len - 1;
     }
 
     /// emit a standard jump instruction
-    pub fn emitJump(self: *Self, offset: i18) !void {
-        try self.emitJ(.JMP, 0, offset);
+    pub fn emitJump(self: *Self, offset: i18) !usize {
+        return self.emitJ(.JMP, 0, offset);
     }
 
     /// emit a conditional jump instruction, returning its position
@@ -128,12 +129,12 @@ pub const Chunk = struct {
 
     /// emit a return instruction
     pub fn emitRet(self: *Self, reg: u6) !void {
-        try self.emitJ(.RET, reg, 0);
+        _ = try self.emitJ(.RET, reg, 0);
     }
 
     /// emit a return void instruction
     pub fn emitRetVoid(self: *Self) !void {
-        try self.emitJ(.RET_VOID, 0, 0);
+        _ = try self.emitJ(.RET_VOID, 0, 0);
     }
 
     /// emit a load instruction based on the value provided,
@@ -146,16 +147,16 @@ pub const Chunk = struct {
                     try self.emitI(.LOADI, dst, 0, @as(i12, @intCast(i)));
                 } else {
                     const idx = try self.addConst(val);
-                    try self.emitJ(.LOADC, dst, @bitCast(idx));
+                    _ = try self.emitJ(.LOADC, dst, @bitCast(idx));
                 }
             },
             .float => {
                 const idx = try self.addConst(val);
-                try self.emitJ(.LOADC, dst, @bitCast(idx));
+                _ = try self.emitJ(.LOADC, dst, @bitCast(idx));
             },
             .bool => |b| try self.emitI(.LOADI, dst, 0, if (b) 1 else 0),
             .fn_ref => |r| {
-                try self.emitJ(.LOADF, dst, @intCast(r));
+                _ = try self.emitJ(.LOADF, dst, @intCast(r));
             },
             // this is technically a FREE, which will be handles separately
             .void => {},

@@ -125,14 +125,15 @@ fn binaryPrecedence(tt: TokenType) ?u8 {
 }
 
 fn primary(self: *Self) !*AstNode {
-    const tok = self.advance();
-    return switch(tok.type) {
+    const peeked = try self.peekNoEnd();
+    return switch(peeked.type) {
         // todo : handle unary ops
         .Numeric => AstNode.create(self.alloc, .{ .expr = .{ .literal = .{
             .kind = .numeric,
-            .val = tok.raw,
+            .val = self.advance().raw,
         }}}),
         .Ident => {
+            const tok = self.advance();
             // check for function call
             if ((try self.peekNoEnd()).type == .Lparen) {
                 var args = try std.ArrayList(*AstNode).initCapacity(self.alloc, 0);
@@ -157,11 +158,18 @@ fn primary(self: *Self) !*AstNode {
             }}});
         },
         .Lparen => {
+            _ = try self.expect(.Lparen);
             const expr = try self.expression(0);
             _ = try self.expect(.Rparen);
             return expr;
         },
+        .True, .False => AstNode.create(self.alloc, .{ .expr = .{ .literal = .{
+            .kind = .bool,
+            .val = self.advance().raw,
+        }}}),
+        .If => self.parseIf(),
         else => {
+            const tok = self.advance();
             std.debug.print("{f}", .{tok});
             return ParseError.UnexpectedToken;
         },
@@ -174,6 +182,7 @@ fn expression(self: *Self, min_prec: u8) ParseError!*AstNode {
 
     while (true) {
         const current = self.peek() orelse return ParseError.UnexpectedEndOfTokens;
+
         const prec = binaryPrecedence(current.type) orelse break;
         if (prec < min_prec) break;
         _ = self.advance();
@@ -195,9 +204,9 @@ fn expression(self: *Self, min_prec: u8) ParseError!*AstNode {
 }
 
 fn parseExpr(self: *Self) ParseError!*AstNode {
-    if ((try self.peekNoEnd()).type == .Lbrace) {
-        return try self.parseBlock();
-    }
+    const peeked = (try self.peekNoEnd()).type;
+    if (peeked == .Lbrace) return try self.parseBlock();
+    if (peeked == .If) return try self.parseIf();
     return try self.expression(0);
 }
 
@@ -270,9 +279,9 @@ pub fn parseBlock(self: *Self) !*AstNode {
     }
     _ = try self.expect(.Rbrace);
 
-    return AstNode.create(self.alloc, .{ .expr =
-        .{ .block = .{ .contents = try nodes.toOwnedSlice(self.alloc) }}
-    });
+    return AstNode.create(self.alloc, .{.expr = .{.block =
+        .{ .contents = try nodes.toOwnedSlice(self.alloc) }
+    }});
 }
 
 pub fn parseRoot(self: *Self) !*AstNode {
@@ -292,4 +301,24 @@ pub fn parseRoot(self: *Self) !*AstNode {
     return AstNode.create(self.alloc, .{
         .root = try nodes.toOwnedSlice(self.alloc)
     });
+}
+
+pub fn parseIf(self: *Self) !*AstNode {
+    _ = try self.expect(.If);
+
+    const clause = try self.parseExpr();
+    const then = try self.parseExpr();
+
+    const else_branch = if ((try self.peekNoEnd()).type == .Else) blk: {
+        _ = try self.expect(.Else);
+        break :blk try self.parseExpr();
+    } else blk: {
+        break :blk null;
+    };
+
+    return AstNode.create(self.alloc, .{.expr = .{.@"if" = .{
+        .clause = clause,
+        .then = then,
+        .@"else" = else_branch,
+    }}});
 }

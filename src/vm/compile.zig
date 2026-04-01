@@ -94,7 +94,7 @@ const Compiler = struct {
         var chunk = self.chunks.items[idx];
         const last = chunk.code.getLastOrNull();
         if (last == null or opcode(last.?) != .RET) {
-            try chunk.emitJ(.RET_VOID, 0, 0);
+            _ = try chunk.emitJ(.RET_VOID, 0, 0);
         }
     }
 
@@ -202,7 +202,8 @@ const Compiler = struct {
                         }
                     },
                     .bool => {
-                        return Error.NotImplemented;
+                        const val = std.mem.eql(u8, lit.val, "true");
+                        try chunk.emitLoad(dst, .{ .bool = val });
                     },
                     .char => {
                         return Error.NotImplemented;
@@ -243,7 +244,7 @@ const Compiler = struct {
                 }
 
                 const dst = try chunk.regs.alloc();
-                try chunk.emitJ(.CALL, dst, @intCast(fn_idx));
+                _ = try chunk.emitJ(.CALL, dst, @intCast(fn_idx));
                 return .{ .reg = dst };
             },
             .unary => |_| {
@@ -259,8 +260,37 @@ const Compiler = struct {
                 if (rhs.owned) chunk.regs.free(rhs.reg);
                 return .{.reg = dst};
             },
-            .@"if" => |_| {
-                return Error.NotImplemented;
+            .@"if" => |i| {
+                const clause = try self.compileExpr(i.clause, chunk_idx);
+                // when false, jumps to the end of the 'then' expression
+                const then_jump = try chunk.emitJ(.JNE, clause.reg, 0);
+                if (clause.owned) chunk.regs.free(clause.reg);
+
+                const dst = try chunk.regs.alloc();
+                
+                const then_res = try self.compileExpr(i.then, chunk_idx);
+
+                if (then_res.reg != dst) {
+                    try chunk.emitR(.LOADR, dst, then_res.reg, 0);
+                }
+
+                if (then_res.owned) chunk.regs.free(then_res.reg);
+
+                if (i.@"else") |e| {
+                    const else_jump = try chunk.emitJump(0);
+                    try chunk.updateJump(then_jump);
+
+                    const else_res = try self.compileExpr(e, chunk_idx);
+
+                    if (else_res.reg != dst) {
+                        try chunk.emitR(.LOADR, dst, else_res.reg, 0);
+                    }
+                    if (else_res.owned) chunk.regs.free(else_res.reg);
+
+                    try chunk.updateJump(else_jump);
+                } else try chunk.updateJump(then_jump);
+
+                return .{ .reg = dst };
             },
             .block => |_| {
                 return Error.NotImplemented;

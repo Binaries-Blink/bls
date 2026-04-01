@@ -3,6 +3,11 @@ const Chunk = @import("chunk.zig").Chunk;
 const Value = @import("chunk.zig").Value;
 const instruction = @import("instruction.zig");
 
+/// the value returned by the main chunk
+pub const ExitValue  = struct {
+    val: Value
+};
+
 pub const StackFrame = struct {
     /// the chunk that this frame is responsible for
     chunk: *const Chunk,
@@ -77,7 +82,16 @@ pub const Vm = struct {
         self.frames.deinit(self.alloc);
     }
 
-    const ArithOp = enum { add, sub, mul, div, mod};
+    pub fn truthy(val: Value) bool {
+        return switch (val) {
+            .int => |i| i != 0,
+            .float => |f| f != 0.0,
+            .bool => |b| b,
+            else => false,
+        };
+    }
+
+    const ArithOp = enum { add, sub, mul, div, mod };
     fn arithmeticOp(op: ArithOp, a: Value, b: Value) !Value {
         switch (a) {
             .int => |lhs| {
@@ -102,6 +116,51 @@ pub const Vm = struct {
             },
             else => return error.TypeError
         }
+    }
+
+    const cmpOp = enum { eq, neq, lt, le, gt, ge };
+    fn comparisonOp(op: cmpOp, a: Value, b: Value) !Value {
+        switch (a) {
+            .int => |lhs| {
+                const rhs = if (b == .int) b.int else return error.TypeError;
+                return .{.bool = switch (op) {
+                    .eq => lhs == rhs,
+                    .neq => lhs != rhs,
+                    .lt => lhs < rhs,
+                    .le => lhs <= rhs,
+                    .gt => lhs > rhs,
+                    .ge => lhs >= rhs,
+                }};
+            },
+            .float => |lhs| {
+                const rhs = if (b == .float) b.float else return error.TypeError;
+                return .{.bool = switch (op) {
+                    .eq => lhs == rhs,
+                    .neq => lhs != rhs,
+                    .lt => lhs < rhs,
+                    .le => lhs <= rhs,
+                    .gt => lhs > rhs,
+                    .ge => lhs >= rhs,
+                }};
+            },
+            .bool => |lhs| {
+                const rhs = if (b == .bool) b.bool else return error.TypeError;
+                return .{.bool = switch (op) {
+                    .eq => lhs == rhs,
+                    .neq => lhs != rhs,
+                    else => return error.UnsupportedOp,
+                }};
+            },
+            else => return error.TypeError,
+        }
+        // return switch (op) {
+        //     .eq => Value { .bool = a.bool == b.bool },
+        //     .neq => Value { .bool = a.bool != b.bool },
+        //     .lt => Value { .bool = a.bool < b.bool },
+        //     .le => Value { .bool = a.bool <= b.bool },
+        //     .gt => Value { .bool = a.bool > b.bool },
+        //     .ge => Value { .bool = a.bool >= b.bool },
+        // };
     }
 
     pub fn runImmediate(self: *Self, inst: instruction.IInst, frame: *StackFrame) !void {
@@ -161,21 +220,56 @@ pub const Vm = struct {
             .AND => { return error.todo; },
             .OR => { return error.todo; },
             .XOR => { return error.todo; },
-            .EQ => { return error.todo; },
-            .NE, .GT => { return error.todo; },
-            .GE => { return error.todo; },
-            .LT => { return error.todo; },
-            .LE => { return error.todo; },
+            .EQ => {
+                const lhs = frame.regs[inst.src1];
+                const rhs = frame.regs[inst.src2];
+                frame.regs[inst.dst] = try comparisonOp(.eq, lhs, rhs);
+            },
+            .NE => {
+                const lhs = frame.regs[inst.src1];
+                const rhs = frame.regs[inst.src2];
+                frame.regs[inst.dst] = try comparisonOp(.neq, lhs, rhs);
+            },
+            .GT => {
+                const lhs = frame.regs[inst.src1];
+                const rhs = frame.regs[inst.src2];
+                frame.regs[inst.dst] = try comparisonOp(.gt, lhs, rhs);
+            },
+            .GE => {
+                const lhs = frame.regs[inst.src1];
+                const rhs = frame.regs[inst.src2];
+                frame.regs[inst.dst] = try comparisonOp(.ge, lhs, rhs);
+            },
+            .LT => {
+                const lhs = frame.regs[inst.src1];
+                const rhs = frame.regs[inst.src2];
+                frame.regs[inst.dst] = try comparisonOp(.lt, lhs, rhs);
+            },
+            .LE => {
+                const lhs = frame.regs[inst.src1];
+                const rhs = frame.regs[inst.src2];
+                frame.regs[inst.dst] = try comparisonOp(.le, lhs, rhs);
+            },
             else => unreachable,
         }
     }
 
-    pub fn runJump(self: *Self, inst: instruction.JInst, frame: *StackFrame) !void {
+    pub fn runJump(self: *Self, inst: instruction.JInst, frame: *StackFrame) !?ExitValue {
         const code: instruction.Opcode = @enumFromInt(inst.code);
         switch (code) {
-            .JMP => { return error.todo; },
-            .JE => { return error.todo; },
-            .JNE => { return error.todo; },
+            .JMP => frame.pc = @intCast(@as(i64, @intCast(frame.pc)) + inst.offset),
+            .JE => {
+                const clause = frame.regs[inst.reg];
+                if (truthy(clause)) {
+                    frame.pc = @intCast(@as(i64, @intCast(frame.pc)) + inst.offset);
+                }
+            },
+            .JNE => {
+                const clause = frame.regs[inst.reg];
+                if (!truthy(clause)) {
+                    frame.pc = @intCast(@as(i64, @intCast(frame.pc)) + inst.offset);
+                }
+            },
             .LOADF => { return error.todo; },
             .LOADC => { return error.todo; },
             .RET => {
@@ -191,7 +285,7 @@ pub const Vm = struct {
                     // returned from top level, program is done
                     // in the future we can have this return the
                     // value as the exit code.
-                    return;
+                    return .{ .val = result };
                 }
 
             },
@@ -221,6 +315,7 @@ pub const Vm = struct {
             .RET_VOID => { return error.todo; },
             else => unreachable,
         }
+        return null;
     }
 
     /// run the program
@@ -247,7 +342,10 @@ pub const Vm = struct {
             switch (inst) {
                 .reg => |i| try self.runRegister(i, frame_ptr),
                 .imm => |i| try self.runImmediate(i, frame_ptr),
-                .jmp => |i| try self.runJump(i, frame_ptr),
+                .jmp => |i| blk: {
+                    const exit = try self.runJump(i, frame_ptr) orelse break :blk;
+                    std.debug.print("main completed with exit value: {f}", .{exit.val});
+                },
             }
 
             // frame_ptr is invalidated past here

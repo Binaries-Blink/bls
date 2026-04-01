@@ -3,4 +3,10 @@ fn calc(n: u64) u64 = (n + 3) * 8
 
 let x = calc(2);      // 40
 let y = calc(x / 2);  // 184
-let z = x * y;        // 40 * 184 = 7360
+
+// todo : if we remove the else block we
+// get a stack overflow,
+// it should simply error out lol
+let z = y * if (x == 40) x else y;
+
+// todo : support returning from main chunk
