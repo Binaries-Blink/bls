@@ -56,7 +56,6 @@ pub const TokenType = enum(u16) {
     BitXor,
     CompBitXor,
 
-    BitNot,
     CompBitNot,
 
     Neq,

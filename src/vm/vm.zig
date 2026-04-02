@@ -182,10 +182,6 @@ pub const Vm = struct {
             .LOADI => frame.regs[inst.dst] = .{ .int = inst.imm },
             .LOADM => { return error.todo; },
             .STOREM => { return error.todo; },
-            .LOADG => { return error.todo; },
-            .STOREG => { return error.todo; },
-            .NEG => { return error.todo; },
-            .NOT => { return error.todo; },
             .ITOF => { return error.todo; },
             .FTOI => { return error.todo; },
             .ARG => {
@@ -227,6 +223,21 @@ pub const Vm = struct {
                 const rhs = frame.regs[inst.src2];
                 frame.regs[inst.dst] = try arithmeticOp(.mod, lhs, rhs);
             },
+            .NEG => {
+                frame.regs[inst.dst] = switch (frame.regs[inst.src1]) {
+                    .int => |i| .{.int = -i},
+                    .float => |f| .{.float = -f},
+                    else => return error.TypeError,
+                };
+            },
+            .POS => {
+                frame.regs[inst.dst] = switch (frame.regs[inst.src1]) {
+                    .int => |i| .{ .int = if (i < 0) -i else i },
+                    .float => |f| .{ .float = if (f < 0) -f else f },
+                    else => return error.TypeError,
+                };
+            },
+            .NOT => { return error.todo; },
             .AND => {
                 const lhs = frame.regs[inst.src1];
                 const rhs = frame.regs[inst.src2];

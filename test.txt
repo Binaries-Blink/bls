@@ -1,5 +1,6 @@
 /// single line function, no block needed
-fn calc(n: u64) u64 = (n + 3) * 8
+// todo : blast need support for unary ops other than '-', like '~' and '+'
+fn calc(n: u64) u64 = (n + 3) * --8
 
 let x = calc(2);      // 40
 let y = calc(x / 2);  // 184

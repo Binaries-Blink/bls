@@ -16,17 +16,13 @@ pub const Opcode = enum(u8) {
     LOADM,
     /// write value to heap memory
     STOREM,
-    /// load a global variable into a register
-    LOADG,
-    /// store a value in a global variable
-    STOREG,
     /// log a certain register to be used for the next function call
     ARG,
 
     // arithmetic
     ADD, SUB,
     MUL, DIV, MOD,
-    NEG,
+    NEG, POS,
 
     // bitwise
     AND, OR, XOR,
@@ -53,7 +49,7 @@ pub const Opcode = enum(u8) {
     FTOI,
 };
 
-pub fn OpToCode(op: Operator) ?Opcode {
+pub fn opToCode(op: Operator) ?Opcode {
     return switch (op) {
         .Add => .ADD,
         .Sub => .SUB,
@@ -75,6 +71,15 @@ pub fn OpToCode(op: Operator) ?Opcode {
         .Lshift => .SHL,
         .Rshift => .SHR,
 
+        else => null,
+    };
+}
+
+pub fn prefixOpToCode(op: Operator) ?Opcode {
+    return switch (op) {
+        .Add => .POS,
+        .Sub => .NEG,
+        .BitNot => .NOT,
         else => null,
     };
 }
@@ -156,11 +161,11 @@ pub const Instruction = union(enum) {
             .AND, .OR, .XOR,
             .SHL, .SHR,
             .EQ, .NE, .GT, .GE, .LT, .LE,
+            .NEG, .NOT, .POS,
             .LOADR, .FREE => Instruction { .reg = @bitCast(encoded) },
 
             .LOADI, .LOADM, .STOREM,
-            .LOADG, .STOREG,
-            .NEG, .NOT, .ITOF, .FTOI,
+            .ITOF, .FTOI,
             .ARG, .ALLOC => Instruction { .imm = @bitCast(encoded) },
 
             .LOADC, .JMP, .JE, .JNE,
@@ -180,14 +185,13 @@ pub fn writeInstruction(encoded: u32, writer: *std.Io.Writer, container: *const 
         .AND, .OR, .XOR,
         .SHL, .SHR,
         .EQ, .NE, .GT, .GE, .LT, .LE,
-        .LOADR, .ARG => {
+        .NEG, .NOT, .POS,
+        .LOADR, .FREE => {
             const inst: RInst = @bitCast(encoded);
             try writer.print("r{d} r{d} r{d}", .{inst.dst, inst.src1, inst.src2});
         },
         .LOADI, .LOADM, .STOREM,
-        .LOADG, .STOREG,
-        .NEG, .NOT,
-        .ITOF, .FTOI => {
+        .ITOF, .FTOI, .ARG, .ALLOC => {
             const inst: IInst = @bitCast(encoded);
             try writer.print("r{d} r{d} #{d}", .{inst.dst, inst.src, inst.imm});
         },
@@ -206,6 +210,5 @@ pub fn writeInstruction(encoded: u32, writer: *std.Io.Writer, container: *const 
         .RET_VOID => {
             try writer.print("RET_VOID", .{});
         },
-        else => {},
     }
 }

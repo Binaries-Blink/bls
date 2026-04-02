@@ -247,14 +247,21 @@ const Compiler = struct {
                 _ = try chunk.emitJ(.CALL, dst, @intCast(fn_idx));
                 return .{ .reg = dst };
             },
-            .unary => |_| {
-                return Error.NotImplemented;
+            .unary => |u| {
+                // todo : unary ops could just be applied to
+                //  the value inside the register directly
+                const op = inst.prefixOpToCode(u.op) orelse return Error.InvalidOp;
+                const operand = try self.compileExpr(u.operand, chunk_idx);
+                const dst = try chunk.regs.alloc();
+                try chunk.emitR(op, dst, operand.reg, 0);
+                if (operand.owned) chunk.regs.free(operand.reg);
+                return .{ .reg = dst };
             },
             .binary => |b| {
                 const lhs = try self.compileExpr(b.left, chunk_idx);
                 const rhs = try self.compileExpr(b.right, chunk_idx);
                 const dst = try chunk.regs.alloc();
-                const op = inst.OpToCode(b.op) orelse return error.InvalidOp;
+                const op = inst.opToCode(b.op) orelse return Error.InvalidOp;
                 try chunk.emitR(op, dst, lhs.reg, rhs.reg);
                 if (lhs.owned) chunk.regs.free(lhs.reg);
                 if (rhs.owned) chunk.regs.free(rhs.reg);

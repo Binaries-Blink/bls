@@ -124,10 +124,35 @@ fn binaryPrecedence(tt: TokenType) ?u8 {
     };
 }
 
+fn prefixPrecedence(tt: TokenType) ?u8 {
+    return switch (tt) {
+        // must always be higher than highest infix
+        .Sub, .Add, .Tilde, .Bang => 20,
+        else => null,
+    };
+}
+
+fn postfixPrecedence(tt: TokenType) ?u8 {
+    switch (tt) {
+        // must always be higher than highest prefix
+        .Question => 30,
+        else => null,
+    }
+}
+
 fn primary(self: *Self) !*AstNode {
     const peeked = try self.peekNoEnd();
+
+    if (prefixPrecedence(peeked.type)) |p| {
+        const op = self.advance().type.toOperator() orelse return ParseError.InvalidOperaotr;
+        const operand = try self.expression(p);
+        return AstNode.create(self.alloc, .{ .expr = .{ .unary = .{
+            .op = op,
+            .operand = operand,
+        }}});
+    }
+
     return switch(peeked.type) {
-        // todo : handle unary ops
         .Numeric => AstNode.create(self.alloc, .{ .expr = .{ .literal = .{
             .kind = .numeric,
             .val = self.advance().raw,
