@@ -153,14 +153,26 @@ pub const Vm = struct {
             },
             else => return error.TypeError,
         }
-        // return switch (op) {
-        //     .eq => Value { .bool = a.bool == b.bool },
-        //     .neq => Value { .bool = a.bool != b.bool },
-        //     .lt => Value { .bool = a.bool < b.bool },
-        //     .le => Value { .bool = a.bool <= b.bool },
-        //     .gt => Value { .bool = a.bool > b.bool },
-        //     .ge => Value { .bool = a.bool >= b.bool },
-        // };
+    }
+
+    const bitOp = enum { @"and", @"or", xor, shl, shr };
+    fn bitwiseOp(op: bitOp, a: Value, b: Value) !Value {
+        const lhs = if (a == .int) a.int else return error.TypeError;
+        const rhs = if (b == .int) b.int else return error.TypeError;
+
+        return .{.int = switch (op) {
+            .@"and" => lhs & rhs,
+            .@"or" => lhs | rhs,
+            .xor => lhs ^ rhs,
+            .shl => blk: {
+                if (rhs < 0 or rhs > 63) return error.TypeError;
+                break :blk lhs << @intCast(rhs);
+            },
+            .shr => blk: {
+                if (rhs < 0 or rhs > 63) return error.TypeError;
+                break :blk lhs >> @intCast(rhs);
+            },
+        }};
     }
 
     pub fn runImmediate(self: *Self, inst: instruction.IInst, frame: *StackFrame) !void {
@@ -174,8 +186,6 @@ pub const Vm = struct {
             .STOREG => { return error.todo; },
             .NEG => { return error.todo; },
             .NOT => { return error.todo; },
-            .SHL => { return error.todo; },
-            .SHR => { return error.todo; },
             .ITOF => { return error.todo; },
             .FTOI => { return error.todo; },
             .ARG => {
@@ -217,9 +227,31 @@ pub const Vm = struct {
                 const rhs = frame.regs[inst.src2];
                 frame.regs[inst.dst] = try arithmeticOp(.mod, lhs, rhs);
             },
-            .AND => { return error.todo; },
-            .OR => { return error.todo; },
-            .XOR => { return error.todo; },
+            .AND => {
+                const lhs = frame.regs[inst.src1];
+                const rhs = frame.regs[inst.src2];
+                frame.regs[inst.dst] = try bitwiseOp(.@"and", lhs, rhs);
+            },
+            .OR => {
+                const lhs = frame.regs[inst.src1];
+                const rhs = frame.regs[inst.src2];
+                frame.regs[inst.dst] = try bitwiseOp(.@"or", lhs, rhs);
+            },
+            .XOR => {
+                const lhs = frame.regs[inst.src1];
+                const rhs = frame.regs[inst.src2];
+                frame.regs[inst.dst] = try bitwiseOp(.xor, lhs, rhs);
+            },
+            .SHL => {
+                const lhs = frame.regs[inst.src1];
+                const rhs = frame.regs[inst.src2];
+                frame.regs[inst.dst] = try bitwiseOp(.shl, lhs, rhs);
+            },
+            .SHR => {
+                const lhs = frame.regs[inst.src1];
+                const rhs = frame.regs[inst.src2];
+                frame.regs[inst.dst] = try bitwiseOp(.shr, lhs, rhs);
+            },
             .EQ => {
                 const lhs = frame.regs[inst.src1];
                 const rhs = frame.regs[inst.src2];

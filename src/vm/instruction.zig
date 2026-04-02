@@ -154,13 +154,13 @@ pub const Instruction = union(enum) {
         return switch (op) {
             .ADD, .SUB, .MUL, .DIV, .MOD,
             .AND, .OR, .XOR,
+            .SHL, .SHR,
             .EQ, .NE, .GT, .GE, .LT, .LE,
             .LOADR, .FREE => Instruction { .reg = @bitCast(encoded) },
 
             .LOADI, .LOADM, .STOREM,
             .LOADG, .STOREG,
-            .NEG, .NOT, .SHL, .SHR,
-            .ITOF, .FTOI,
+            .NEG, .NOT, .ITOF, .FTOI,
             .ARG, .ALLOC => Instruction { .imm = @bitCast(encoded) },
 
             .LOADC, .JMP, .JE, .JNE,
@@ -178,6 +178,7 @@ pub fn writeInstruction(encoded: u32, writer: *std.Io.Writer, container: *const 
     switch (op) {
         .ADD, .SUB, .MUL, .DIV, .MOD,
         .AND, .OR, .XOR,
+        .SHL, .SHR,
         .EQ, .NE, .GT, .GE, .LT, .LE,
         .LOADR, .ARG => {
             const inst: RInst = @bitCast(encoded);
@@ -185,7 +186,7 @@ pub fn writeInstruction(encoded: u32, writer: *std.Io.Writer, container: *const 
         },
         .LOADI, .LOADM, .STOREM,
         .LOADG, .STOREG,
-        .NEG, .NOT, .SHL, .SHR,
+        .NEG, .NOT,
         .ITOF, .FTOI => {
             const inst: IInst = @bitCast(encoded);
             try writer.print("r{d} r{d} #{d}", .{inst.dst, inst.src, inst.imm});
